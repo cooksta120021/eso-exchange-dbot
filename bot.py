@@ -72,6 +72,91 @@ async def remove_listing(ctx, trader):
     else:
         await ctx.send(f"No listings found for trader: {trader}")
 
+@bot.command(name='help')
+async def show_help(ctx):
+    """Display help information for ESO Exchange Bot commands"""
+    help_embed = discord.Embed(
+        title="ESO Exchange Bot Commands",
+        description="Manage ESO Crown and Gold Exchange Listings",
+        color=discord.Color.blue()
+    )
+    
+    help_embed.add_field(
+        name="!esoaddlisting",
+        value=(
+            "Add a new exchange listing\n"
+            "**Usage:** `!esoaddlisting [trader] [crowns] [gold] [time_info] [days_left]`\n"
+            "**Example:** `!esoaddlisting Coizado 16000 16800000 \"12PM - 8PM EST\" 0`"
+        ),
+        inline=False
+    )
+    
+    help_embed.add_field(
+        name="!esolistings",
+        value=(
+            "Show all current exchange listings\n"
+            "**Usage:** `!esolistings`"
+        ),
+        inline=False
+    )
+    
+    help_embed.add_field(
+        name="!esoremovelistings",
+        value=(
+            "Remove a listing by trader name\n"
+            "**Usage:** `!esoremovelistings [trader]`\n"
+            "**Example:** `!esoremovelistings Coizado`"
+        ),
+        inline=False
+    )
+    
+    help_embed.add_field(
+        name="Days Left Explanation",
+        value=(
+            "0: Normal store item\n"
+            "Number > 0: Time-sensitive item with priority"
+        ),
+        inline=False
+    )
+    
+    help_embed.set_footer(text="ESO Exchange Bot - Helping traders connect!")
+    
+    await ctx.send(embed=help_embed)
+
+@bot.command(name='usage')
+async def show_usage(ctx):
+    """Display usage instructions for ESO Exchange Bot"""
+    usage_embed = discord.Embed(
+        title="ESO Exchange Bot Usage",
+        description="How to use the ESO Exchange Bot",
+        color=discord.Color.blue()
+    )
+    
+    usage_embed.add_field(
+        name="Getting Started",
+        value=(
+            "1. Invite the bot to your server\n"
+            "2. Use the `!esoaddlisting` command to add a new exchange listing\n"
+            "3. Use the `!esolistings` command to view all current exchange listings\n"
+            "4. Use the `!esoremovelistings` command to remove a listing by trader name"
+        ),
+        inline=False
+    )
+    
+    usage_embed.add_field(
+        name="Tips and Tricks",
+        value=(
+            "Use the `!esoaddlisting` command to add multiple listings at once\n"
+            "Use the `!esolistings` command to view listings in a specific category\n"
+            "Use the `!esoremovelistings` command to remove multiple listings at once"
+        ),
+        inline=False
+    )
+    
+    usage_embed.set_footer(text="ESO Exchange Bot - Helping traders connect!")
+    
+    await ctx.send(embed=usage_embed)
+
 @bot.event
 async def on_ready():
     print(f'{bot.user} has connected to Discord!')
