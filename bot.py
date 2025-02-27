@@ -14,9 +14,13 @@ APPLICATION_ID = os.getenv('DISCORD_APPLICATION_ID')
 PUBLIC_KEY = os.getenv('DISCORD_PUBLIC_KEY')
 
 # Bot configuration
-intents = discord.Intents.all()  # Enable all intents
-intents.message_content = True
-intents.members = True
+intents = discord.Intents.none()  # Start with no intents
+intents.guilds = True  # Basic guild information
+intents.guild_messages = True  # Message events in guilds
+intents.message_content = True  # Required for reading message content
+intents.guild_members = True  # Member-related events
+intents.guild_reactions = True  # Reaction events
+
 bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
 
 # Predefined list of timezones
