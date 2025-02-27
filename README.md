@@ -8,6 +8,27 @@ A Discord bot designed for Elder Scrolls Online (ESO) traders to manage and trac
 
 ## Setup and Configuration
 
+### Bot Permissions
+
+#### Permission Integer
+
+The permission integer `8` represents the "Administrator" permission, which grants full server access. 
+
+Recommended Permissions:
+- For most bots, use a more limited set of permissions
+- Typical bot permissions include:
+  * Send Messages: 2048
+  * Read Message History: 65536
+  * Use Slash Commands: 2097152
+
+#### Generating Invite Link
+
+To create an invite link with specific permissions:
+1. Go to OAuth2 > URL Generator in Discord Developer Portal
+2. Select bot scopes
+3. Choose specific permissions
+4. Copy the generated URL
+
 ### Discord Bot Intents
 
 To run this bot, you need to enable specific intents in the Discord Developer Portal:
@@ -34,6 +55,13 @@ If you encounter a `PrivilegedIntentsRequired` error, double-check that you have
 - Enabled all required intents
 - Invited the bot to your server with the correct permissions
 - Regenerated your bot token if necessary
+
+### Troubleshooting Permissions
+
+If your bot experiences permission issues:
+- Verify bot role hierarchy
+- Check channel-specific permissions
+- Ensure bot has necessary intents enabled
 
 ## Setup
 1. Create a Discord bot and get your token from the Discord Developer Portal
