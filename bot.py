@@ -13,7 +13,7 @@ PUBLIC_KEY = os.getenv('DISCORD_PUBLIC_KEY')
 # Bot configuration
 intents = discord.Intents.default()
 intents.message_content = True
-bot = commands.Bot(command_prefix='!eso', intents=intents, help_command=None)
+bot = commands.Bot(command_prefix='eso', intents=intents, help_command=None)
 
 class ExchangeListing:
     def __init__(self, trader, crowns, gold, time_info, days_left):
@@ -44,7 +44,7 @@ class ExchangeManager:
 
 exchange_manager = ExchangeManager()
 
-@bot.command(name='/newlisting')
+@bot.command(name='newlisting')
 async def start_listing(ctx):
     """Start an interactive listing creation process"""
     # Initialize the listing creation state for this user
@@ -146,7 +146,7 @@ async def show_help(ctx):
     )
     
     help_embed.add_field(
-        name="/newlisting",
+        name="!newlisting",
         value=(
             "Start an interactive listing creation process\n"
             "Guides you through adding a new exchange listing step by step"
