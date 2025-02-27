@@ -13,7 +13,7 @@ PUBLIC_KEY = os.getenv('DISCORD_PUBLIC_KEY')
 # Bot configuration
 intents = discord.Intents.default()
 intents.message_content = True
-bot = commands.Bot(command_prefix='!eso', intents=intents)
+bot = commands.Bot(command_prefix='!eso', intents=intents, help_command=None)
 
 class ExchangeListing:
     def __init__(self, trader, crowns, gold, time_info, days_left):
@@ -122,40 +122,6 @@ async def show_help(ctx):
     help_embed.set_footer(text="ESO Exchange Bot - Helping traders connect!")
     
     await ctx.send(embed=help_embed)
-
-@bot.command(name='usage')
-async def show_usage(ctx):
-    """Display usage instructions for ESO Exchange Bot"""
-    usage_embed = discord.Embed(
-        title="ESO Exchange Bot Usage",
-        description="How to use the ESO Exchange Bot",
-        color=discord.Color.blue()
-    )
-    
-    usage_embed.add_field(
-        name="Getting Started",
-        value=(
-            "1. Invite the bot to your server\n"
-            "2. Use the `!esoaddlisting` command to add a new exchange listing\n"
-            "3. Use the `!esolistings` command to view all current exchange listings\n"
-            "4. Use the `!esoremovelistings` command to remove a listing by trader name"
-        ),
-        inline=False
-    )
-    
-    usage_embed.add_field(
-        name="Tips and Tricks",
-        value=(
-            "Use the `!esoaddlisting` command to add multiple listings at once\n"
-            "Use the `!esolistings` command to view listings in a specific category\n"
-            "Use the `!esoremovelistings` command to remove multiple listings at once"
-        ),
-        inline=False
-    )
-    
-    usage_embed.set_footer(text="ESO Exchange Bot - Helping traders connect!")
-    
-    await ctx.send(embed=usage_embed)
 
 @bot.event
 async def on_ready():
