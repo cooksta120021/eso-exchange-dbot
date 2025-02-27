@@ -31,6 +31,7 @@ class ExchangeListing:
 class ExchangeManager:
     def __init__(self):
         self.listings = []
+        self.listing_creation_state = {}
 
     def add_listing(self, listing):
         self.listings.append(listing)
@@ -43,12 +44,75 @@ class ExchangeManager:
 
 exchange_manager = ExchangeManager()
 
-@bot.command(name='addlisting')
-async def add_listing(ctx, trader, crowns: int, gold: int, time_info, days_left: int = 0):
-    """Add a new exchange listing"""
-    listing = ExchangeListing(trader, crowns, gold, time_info, days_left)
-    exchange_manager.add_listing(listing)
-    await ctx.send(f"Added listing: {listing}")
+@bot.command(name='/newlisting')
+async def start_listing(ctx):
+    """Start an interactive listing creation process"""
+    # Initialize the listing creation state for this user
+    exchange_manager.listing_creation_state[ctx.author.id] = {}
+    
+    # Start the interactive process
+    await ctx.send("Let's create a new exchange listing! What's the trader's name?")
+
+@bot.event
+async def on_message(message):
+    # Ignore bot messages
+    if message.author.bot:
+        return
+    
+    # Check if the user is in the middle of creating a listing
+    if message.author.id in exchange_manager.listing_creation_state:
+        state = exchange_manager.listing_creation_state[message.author.id]
+        
+        # Guide the user through listing creation steps
+        if 'trader' not in state:
+            state['trader'] = message.content.strip()
+            await message.channel.send(f"Trader set to {state['trader']}. How many Crowns are you offering?")
+        
+        elif 'crowns' not in state:
+            try:
+                state['crowns'] = int(message.content.strip())
+                await message.channel.send(f"Crowns set to {state['crowns']}. How much Gold do you want in exchange?")
+            except ValueError:
+                await message.channel.send("Please enter a valid number of Crowns.")
+        
+        elif 'gold' not in state:
+            try:
+                state['gold'] = int(message.content.strip())
+                await message.channel.send(f"Gold set to {state['gold']}. What are your available times? (e.g., '12PM - 8PM EST')")
+            except ValueError:
+                await message.channel.send("Please enter a valid amount of Gold.")
+        
+        elif 'time_info' not in state:
+            state['time_info'] = message.content.strip()
+            await message.channel.send(f"Time set to {state['time_info']}. How many days is this listing valid? (0 for normal listing)")
+        
+        elif 'days_left' not in state:
+            try:
+                state['days_left'] = int(message.content.strip())
+                
+                # Create the listing
+                listing = ExchangeListing(
+                    state['trader'], 
+                    state['crowns'], 
+                    state['gold'], 
+                    state['time_info'], 
+                    state['days_left']
+                )
+                
+                # Add the listing
+                exchange_manager.add_listing(listing)
+                
+                # Confirm the listing
+                await message.channel.send(f"Listing created successfully!\n{listing}")
+                
+                # Clear the state
+                del exchange_manager.listing_creation_state[message.author.id]
+            
+            except ValueError:
+                await message.channel.send("Please enter a valid number of days.")
+    
+    # Process other commands
+    await bot.process_commands(message)
 
 @bot.command(name='listings')
 async def show_listings(ctx):
@@ -82,11 +146,10 @@ async def show_help(ctx):
     )
     
     help_embed.add_field(
-        name="!esoaddlisting",
+        name="/newlisting",
         value=(
-            "Add a new exchange listing\n"
-            "**Usage:** `!esoaddlisting [trader] [crowns] [gold] [time_info] [days_left]`\n"
-            "**Example:** `!esoaddlisting Coizado 16000 16800000 \"12PM - 8PM EST\" 0`"
+            "Start an interactive listing creation process\n"
+            "Guides you through adding a new exchange listing step by step"
         ),
         inline=False
     )
