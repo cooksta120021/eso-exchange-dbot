@@ -14,7 +14,7 @@ APPLICATION_ID = os.getenv('DISCORD_APPLICATION_ID')
 PUBLIC_KEY = os.getenv('DISCORD_PUBLIC_KEY')
 
 # Bot configuration
-intents = discord.Intents.default()
+intents = discord.Intents.all()  # Enable all intents
 intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
