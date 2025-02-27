@@ -13,7 +13,7 @@ PUBLIC_KEY = os.getenv('DISCORD_PUBLIC_KEY')
 # Bot configuration
 intents = discord.Intents.default()
 intents.message_content = True
-bot = commands.Bot(command_prefix='eso', intents=intents, help_command=None)
+bot = commands.Bot(command_prefix='!eso', intents=intents, help_command=None)
 
 class ExchangeListing:
     def __init__(self, trader, crowns, gold, time_info, days_left):
@@ -124,7 +124,7 @@ async def show_listings(ctx):
     listings_text = "\n".join(str(listing) for listing in exchange_manager.get_listings())
     await ctx.send(f"Current Listings:\n{listings_text}")
 
-@bot.command(name='removelisting')
+@bot.command(name='removelistings')
 async def remove_listing(ctx, trader):
     """Remove a listing by trader name"""
     original_count = len(exchange_manager.get_listings())
@@ -146,7 +146,7 @@ async def show_help(ctx):
     )
     
     help_embed.add_field(
-        name="!newlisting",
+        name="!eso newlisting",
         value=(
             "Start an interactive listing creation process\n"
             "Guides you through adding a new exchange listing step by step"
@@ -155,20 +155,20 @@ async def show_help(ctx):
     )
     
     help_embed.add_field(
-        name="!esolistings",
+        name="!eso listings",
         value=(
             "Show all current exchange listings\n"
-            "**Usage:** `!esolistings`"
+            "**Usage:** `!eso listings`"
         ),
         inline=False
     )
     
     help_embed.add_field(
-        name="!esoremovelistings",
+        name="!eso removelistings",
         value=(
             "Remove a listing by trader name\n"
-            "**Usage:** `!esoremovelistings [trader]`\n"
-            "**Example:** `!esoremovelistings Coizado`"
+            "**Usage:** `!eso removelistings [trader]`\n"
+            "**Example:** `!eso removelistings Coizado`"
         ),
         inline=False
     )
