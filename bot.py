@@ -1,7 +1,9 @@
 import os
 import discord
+from discord.ui import View, Button, Modal, TextInput
 from discord.ext import commands
 from dotenv import load_dotenv
+import pytz
 
 # Load environment variables
 load_dotenv()
@@ -14,47 +16,218 @@ PUBLIC_KEY = os.getenv('DISCORD_PUBLIC_KEY')
 # Bot configuration
 intents = discord.Intents.default()
 intents.message_content = True
+intents.members = True
 bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
 
+# Predefined list of timezones
+AVAILABLE_TIMEZONES = sorted(pytz.all_timezones)
+
 class ExchangeListing:
-    def __init__(self, trader, crowns, gold, time_info, days_left):
-        self.trader = trader
-        self.crowns = crowns
-        self.gold = gold
-        self.time_info = time_info
-        self.days_left = days_left
+    def __init__(self, buyer_name, crowns, gold_per_crown, item, time_sensitive_days, 
+                 days_available, time_available, timezone):
+        self.buyer_name = buyer_name
+        self.crowns = int(crowns)
+        self.gold_per_crown = float(gold_per_crown)
+        self.item = item
+        self.time_sensitive_days = int(time_sensitive_days)
+        self.days_available = days_available
+        self.time_available = time_available
+        self.timezone = timezone
+        
+        # Calculate total gold
+        self.total_gold = int(self.crowns * self.gold_per_crown)
     
     def __str__(self):
-        return f"@{self.trader}: {self.crowns} Crowns for {self.gold} Gold | Time: {self.time_info} | Days Left: {self.days_left}"
+        """
+        Create a copy-pastable listing format
+        """
+        return (
+            f"@{self.buyer_name}|"
+            f"{self.gold_per_crown}|"
+            f"{self.crowns}|"
+            f"{self.item}|"
+            f"{self.time_sensitive_days}|"
+            f"{self.days_available}|"
+            f"{self.time_available}|"
+            f"{self.timezone}|"
+            f"{self.total_gold}"
+        )
+    
+    @classmethod
+    def from_string(cls, listing_string):
+        """
+        Reconstruct a listing from a copy-pasted string
+        """
+        parts = listing_string.split('|')
+        if len(parts) != 9:
+            raise ValueError("Invalid listing format")
+        
+        # Remove @ from buyer name if present
+        buyer_name = parts[0].lstrip('@')
+        
+        return cls(
+            buyer_name=buyer_name,
+            crowns=parts[2],
+            gold_per_crown=parts[1],
+            item=parts[3],
+            time_sensitive_days=parts[4],
+            days_available=parts[5],
+            time_available=parts[6],
+            timezone=parts[7]
+        )
 
 class ExchangeManager:
     def __init__(self):
         self.listings = []
         self.listing_creation_state = {}
+        self.timezone_selection_state = {}
     
     def add_listing(self, listing):
         self.listings.append(listing)
     
-    def remove_listing(self, trader):
-        self.listings = [listing for listing in self.listings if listing.trader.lower() != trader.lower()]
+    def remove_listing(self, buyer_name):
+        self.listings = [listing for listing in self.listings if listing.buyer_name.lower() != buyer_name.lower()]
     
     def get_listings(self):
         return self.listings
 
 exchange_manager = ExchangeManager()
 
-@bot.event
-async def on_ready():
-    print(f'Logged in as {bot.user.name}')
+class ListingCreationModal(Modal):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.buyer_name = TextInput(
+            label="Buyer Name",
+            placeholder="Enter your name",
+            style=discord.TextStyle.short,
+            required=True
+        )
+        self.add_item(self.buyer_name)
+        
+        self.gold_per_crown = TextInput(
+            label="Exchange Rate (Gold per Crown)",
+            placeholder="How many gold per crown?",
+            style=discord.TextStyle.short,
+            required=True
+        )
+        self.add_item(self.gold_per_crown)
+        
+        self.crowns = TextInput(
+            label="Crown Amount",
+            placeholder="How many crowns do you want to exchange?",
+            style=discord.TextStyle.short,
+            required=True
+        )
+        self.add_item(self.crowns)
+        
+        self.item = TextInput(
+            label="Item",
+            placeholder="What item are you trading?",
+            style=discord.TextStyle.short,
+            required=True
+        )
+        self.add_item(self.item)
+        
+        self.time_sensitive_days = TextInput(
+            label="Time Sensitive Days",
+            placeholder="Days at time of listing (0 if not time-sensitive)",
+            style=discord.TextStyle.short,
+            required=True
+        )
+        self.add_item(self.time_sensitive_days)
+        
+        self.days_available = TextInput(
+            label="Days Available",
+            placeholder="Which days are you available?",
+            style=discord.TextStyle.short,
+            required=True
+        )
+        self.add_item(self.days_available)
+        
+        self.time_available = TextInput(
+            label="Time Available",
+            placeholder="What times are you available?",
+            style=discord.TextStyle.short,
+            required=True
+        )
+        self.add_item(self.time_available)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        try:
+            # Create timezone selection view
+            timezone_view = TimezoneSelectionView(
+                buyer_name=self.buyer_name.value,
+                crowns=self.crowns.value,
+                gold_per_crown=self.gold_per_crown.value,
+                item=self.item.value,
+                time_sensitive_days=self.time_sensitive_days.value,
+                days_available=self.days_available.value,
+                time_available=self.time_available.value
+            )
+            
+            await interaction.response.send_message(
+                "Select your timezone:", 
+                view=timezone_view, 
+                ephemeral=True
+            )
+        except Exception as e:
+            await interaction.response.send_message(f"Error: {e}", ephemeral=True)
+
+class TimezoneSelectionView(View):
+    def __init__(self, buyer_name, crowns, gold_per_crown, item, 
+                 time_sensitive_days, days_available, time_available):
+        super().__init__()
+        self.buyer_name = buyer_name
+        self.crowns = crowns
+        self.gold_per_crown = gold_per_crown
+        self.item = item
+        self.time_sensitive_days = time_sensitive_days
+        self.days_available = days_available
+        self.time_available = time_available
+        
+        # Dynamically create timezone buttons
+        timezone_groups = [AVAILABLE_TIMEZONES[i:i+25] for i in range(0, len(AVAILABLE_TIMEZONES), 25)]
+        
+        for group in timezone_groups[:4]:  # Limit to first 4 groups to avoid Discord's button limit
+            group_view = View()
+            for tz in group:
+                button = Button(label=tz, style=discord.ButtonStyle.primary)
+                button.callback = self.create_timezone_callback(tz)
+                group_view.add_item(button)
+            self.add_item(group_view)
+
+    def create_timezone_callback(self, timezone):
+        async def callback(interaction: discord.Interaction):
+            try:
+                # Create the listing
+                new_listing = ExchangeListing(
+                    buyer_name=self.buyer_name,
+                    crowns=self.crowns,
+                    gold_per_crown=self.gold_per_crown,
+                    item=self.item,
+                    time_sensitive_days=self.time_sensitive_days,
+                    days_available=self.days_available,
+                    time_available=self.time_available,
+                    timezone=timezone
+                )
+                
+                # Add the listing to the exchange manager
+                exchange_manager.add_listing(new_listing)
+                
+                # Send confirmation
+                await interaction.response.send_message(
+                    f"Listing created successfully!\n{new_listing}", 
+                    ephemeral=True
+                )
+            except Exception as e:
+                await interaction.response.send_message(f"Error creating listing: {e}", ephemeral=True)
+        return callback
 
 @bot.command(name='newlisting')
 async def start_listing(ctx):
-    """Start an interactive listing creation process"""
-    # Initialize the listing creation state for this user
-    exchange_manager.listing_creation_state[ctx.author.id] = {}
-    
-    # Start the interactive process
-    await ctx.send("Let's create a new exchange listing! What's the trader's name?")
+    """Start an interactive listing creation process using a modal"""
+    modal = ListingCreationModal(title="Create ESO Exchange Listing")
+    await ctx.interaction.response.send_modal(modal)
 
 @bot.command(name='listings')
 async def show_listings(ctx):
@@ -67,16 +240,16 @@ async def show_listings(ctx):
     await ctx.send(f"Current Listings:\n{listings_text}")
 
 @bot.command(name='removelistings')
-async def remove_listing(ctx, trader):
-    """Remove a listing by trader name"""
+async def remove_listing(ctx, buyer_name):
+    """Remove a listing by buyer name"""
     original_count = len(exchange_manager.get_listings())
-    exchange_manager.remove_listing(trader)
+    exchange_manager.remove_listing(buyer_name)
     new_count = len(exchange_manager.get_listings())
     
     if original_count > new_count:
-        await ctx.send(f"Removed listing(s) for trader: {trader}")
+        await ctx.send(f"Removed listing(s) for buyer: {buyer_name}")
     else:
-        await ctx.send(f"No listings found for trader: {trader}")
+        await ctx.send(f"No listings found for buyer: {buyer_name}")
 
 @bot.command(name='help')
 async def show_help(ctx):
@@ -108,18 +281,9 @@ async def show_help(ctx):
     help_embed.add_field(
         name="!removelistings",
         value=(
-            "Remove a listing by trader name\n"
-            "**Usage:** `!removelistings [trader]`\n"
+            "Remove a listing by buyer name\n"
+            "**Usage:** `!removelistings [buyer]`\n"
             "**Example:** `!removelistings Coizado`"
-        ),
-        inline=False
-    )
-    
-    help_embed.add_field(
-        name="Days Left Explanation",
-        value=(
-            "0: Normal store item\n"
-            "Number > 0: Time-sensitive item with priority"
         ),
         inline=False
     )
@@ -129,62 +293,13 @@ async def show_help(ctx):
     await ctx.send(embed=help_embed)
 
 @bot.event
+async def on_ready():
+    print(f'Logged in as {bot.user.name}')
+
+@bot.event
 async def on_message(message):
     # Ignore messages from the bot itself
     if message.author == bot.user:
-        return
-    
-    # Check if the message is part of the listing creation process
-    if message.author.id in exchange_manager.listing_creation_state:
-        state = exchange_manager.listing_creation_state[message.author.id]
-        
-        if 'trader' not in state:
-            # First step: Get trader name
-            state['trader'] = message.content.strip()
-            await message.channel.send(f"Trader name set to {state['trader']}. How many crowns do you want to exchange?")
-        
-        elif 'crowns' not in state:
-            # Second step: Get crown amount
-            try:
-                state['crowns'] = int(message.content.strip())
-                await message.channel.send(f"Crown amount set to {state['crowns']}. How much gold are you offering?")
-            except ValueError:
-                await message.channel.send("Please enter a valid number of crowns.")
-        
-        elif 'gold' not in state:
-            # Third step: Get gold amount
-            try:
-                state['gold'] = int(message.content.strip())
-                await message.channel.send(f"Gold amount set to {state['gold']}. When are you available? (e.g., 'evenings', 'weekends')")
-            except ValueError:
-                await message.channel.send("Please enter a valid amount of gold.")
-        
-        elif 'time_info' not in state:
-            # Fourth step: Get time availability
-            state['time_info'] = message.content.strip()
-            await message.channel.send(f"Availability set to {state['time_info']}. How many days left on the item? (0 for normal store item)")
-        
-        elif 'days_left' not in state:
-            # Final step: Get days left
-            try:
-                state['days_left'] = int(message.content.strip())
-                
-                # Create and save the listing
-                new_listing = ExchangeListing(
-                    state['trader'], 
-                    state['crowns'], 
-                    state['gold'], 
-                    state['time_info'], 
-                    state['days_left']
-                )
-                exchange_manager.add_listing(new_listing)
-                
-                # Clear the state and confirm
-                del exchange_manager.listing_creation_state[message.author.id]
-                await message.channel.send(f"Listing created successfully!\n{new_listing}")
-            except ValueError:
-                await message.channel.send("Please enter a valid number of days.")
-        
         return
     
     # Process other commands
